@@ -3,6 +3,8 @@
 A simple web app where users can submit a monetary transaction (amount + description).
 Front-end in React, back-end in Node.js/Express, using in-memory storage.
 
+![Demo](docs/demo.gif)
+
 ---
 
 ## Tech Stack
