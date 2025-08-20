@@ -1,49 +1,22 @@
+"use client";
 import { Transaction } from "@/models/transaction";
-import { useEffect, useState } from "react"
 
-
-
-const TransactionDetail = ({transactionId}: {transactionId: number | null}) => {
-    const [transaction, setTransaction] = useState<Transaction>();
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-
-        const fetchTransactions = async () => { 
-            if(!transactionId) {
-                setTransaction(undefined);
-                return;
-            };
-            setLoading(true);
-            const res = await fetch(process.env.API_URL ?? "http://localhost:3000/api/transactions");
-
-            if (res.ok) {
-                const data = res.body;
-                setTransaction(data);
-                console.log("Transactions fetched:", data);
-            } else {
-                console.error("Failed to fetch transactions");
-            }
-
-            setLoading(false);
-        }
-
-        fetchTransactions();
-
-        return () => {
-            console.log("Transactions component unmounted");
-        }
-    }, [transactionId]);
-
-
-    return <>
-        {transaction &&
-            <div key={transaction.id}>
-                <h3>{transaction.description}</h3>
-                <p>Amount: {transaction.amount}</p>
-            </div>
-        }
-    </>
+function currency(n: number) {
+  try { return n.toLocaleString(undefined, { style: "currency", currency: "BRL" }); }
+  catch { return `R$ ${n.toFixed(2)}`; }
 }
 
-export default TransactionDetail
+export default function TransactionDetail({ tx }: { tx: Transaction | null }) {
+  if (!tx) return <div className="card"><p className="state">Select a transaction to see details.</p></div>;
+
+  return (
+    <div className="card">
+      <h2 className="formTitle">Details</h2>
+      <div className="detailGrid">
+        <div className="kv"><span>ID</span><span>{tx.id}</span></div>
+        <div className="kv"><span>Description</span><span>{tx.description}</span></div>
+        <div className="kv"><span>Amount</span><span>{currency(tx.amount)}</span></div>
+      </div>
+    </div>
+  );
+}

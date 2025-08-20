@@ -1,44 +1,84 @@
-import { Dispatch, SetStateAction, useState } from "react";
+"use client";
+import { useState } from "react";
+import { Transaction } from "@/models/transaction";
 
-const TransactionForm = ({setTransaction}: {setTransaction: Dispatch<SetStateAction<number | null>>}) => {
-    const [transactionDescription, setTransactionDescription] = useState('');
-    const [transactionAmount, setTransactionAmount] = useState(0);
+type Props = { onCreated: (t: Transaction) => void; apiBase: string };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+export default function TransactionForm({ onCreated, apiBase }: Props) {
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
 
-        const newTransaction = {
-            description: transactionDescription,
-            amount: transactionAmount
-        };
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    setError(null);
+    setOk(false);
 
-        fetch(process.env.API_URL ?? "http://localhost:3000/api/transactions", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(newTransaction)
-        })
-        .then(res => res.json())
-        .then(data => {
-            console.log("Transaction created:", data);
-            setTransactionDescription('');
-            setTransactionAmount(0);
-            setTransaction(data.id);
-        })
-        .catch(error => {
-            console.error("Error creating transaction:", error);
-        });
-    };
+    const parsed = Number(amount);
+    if (!description.trim() || Number.isNaN(parsed)) {
+      setError("Fill all fields with valid values.");
+      return;
+    }
 
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${apiBase}/transactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: description.trim(), amount: parsed }),
+      });
+      if (!res.ok) throw new Error("Error submitting transaction");
+      const created: Transaction = await res.json();
+      onCreated(created);
+      setDescription("");
+      setAmount("");
+      setOk(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input type="text" value={transactionDescription} placeholder="Transaction Name" onChange={(e) => setTransactionDescription(e.target.value)} />
-      <input type="number" value={transactionAmount} placeholder="Amount" onChange={(e) => setTransactionAmount(Number(e.target.value))} />
-      <button type="submit">Submit</button>
+    <form onSubmit={handleSubmit} className="card">
+      <h2 className="formTitle">New Transaction</h2>
+      <div className="grid">
+        <div>
+          <label className="label">Description</label>
+          <input
+            className="input"
+            type="text"
+            placeholder="e.g. Coffee"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            maxLength={80}
+          />
+          <div className="helper">Up to 80 characters</div>
+        </div>
+        <div>
+          <label className="label">Amount</label>
+          <input
+            className="input"
+            inputMode="decimal"
+            type="number"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <div className="helper">Positive or negative</div>
+        </div>
+        {error && <p className="error">{error}</p>}
+        {!error && ok && <p className="state ok">Saved successfully</p>}
+        <div className="actions">
+          <button className="btn" type="submit" disabled={submitting}>
+            {submitting ? "Submitting…" : "Submit"}
+          </button>
+        </div>
+      </div>
     </form>
   );
 }
-
-export default TransactionForm;
